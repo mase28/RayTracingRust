@@ -1,7 +1,7 @@
-use crate::hittable::*;
 use crate::interval::Interval;
 use crate::material::Material;
 use crate::ray::Ray;
+use crate::scene::HitRecord;
 use crate::vec::{Point, Vec3};
 
 use std::sync::Arc;
@@ -9,11 +9,11 @@ use std::sync::Arc;
 pub struct Sphere {
     center: Point,
     radius: f64,
-    mat: Rc<dyn Material>,
+    mat_idx: usize,
 }
 
-impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray, ray_t: &Interval) -> Option<HitRecord> {
+impl Sphere {
+    pub fn hit(&self, ray: &Ray, ray_t: &Interval) -> Option<HitRecord> {
         let oc = self.center - ray.origin();
         let a = ray.direction().dot(*ray.direction());
         let h = ray.direction().dot(oc);
@@ -36,7 +36,7 @@ impl Hittable for Sphere {
 
         let p = ray.at(root);
         let outward_normal = (p - self.center) / self.radius;
-        let mut rec = HitRecord::new(p, Vec3::random(), root, &*self.mat);
+        let mut rec = HitRecord::new(p, Vec3::random(), root, self.mat_idx);
         rec.set_face_normal(ray, &outward_normal);
 
         Some(rec)
@@ -44,11 +44,11 @@ impl Hittable for Sphere {
 }
 
 impl Sphere {
-    pub fn new(center: Point, radius: f64, mat: Arc<dyn Material + Send + Sync>) -> Self {
+    pub fn new(center: Point, radius: f64, mat_idx: usize) -> Self {
         Self {
             center,
             radius,
-            mat,
+            mat_idx,
         }
     }
 }

@@ -6,22 +6,22 @@ use crate::vec::{Point, Vec3};
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct HitRecord<'a> {
+pub struct HitRecord {
     pub p: Point,
     pub normal: Vec3,
     pub t: f64,
     pub front_face: bool,
-    pub mat: &'a dyn Material,
+    pub mat_idx: usize,
 }
 
-impl<'a> HitRecord<'a> {
-    pub fn new(p: Point, normal: Vec3, t: f64, mat: &'a dyn Material) -> Self {
+impl HitRecord {
+    pub fn new(p: Point, normal: Vec3, t: f64, mat_idx: usize) -> Self {
         Self {
             p,
             normal,
             t,
             front_face: true,
-            mat,
+            mat_idx,
         }
     }
 
@@ -62,20 +62,5 @@ impl Hittable for HittableList {
         }
 
         rec
-    }
-}
-
-impl HittableList {
-    pub fn new() -> Self {
-        Self {
-            objects: Vec::<Arc<dyn Hittable + Send + Sync>>::new(),
-        }
-    }
-    pub fn clear(&mut self) {
-        self.objects.clear();
-    }
-
-    pub fn add(&mut self, object: Arc<dyn Hittable + Send + Sync>) {
-        self.objects.push(object);
     }
 }

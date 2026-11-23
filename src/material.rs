@@ -1,10 +1,10 @@
 use crate::color::Color;
-use crate::hittable::HitRecord;
 use crate::ray::Ray;
+use crate::scene::HitRecord;
 use crate::utility::random_double;
 use crate::vec::Vec3;
 
-pub trait Material {
+pub trait Material: Send + Sync {
     fn scatter(
         &self,
         r_in: &Ray,
@@ -116,5 +116,27 @@ impl Material for Dialectric {
         }
         *scattered = Ray::new(rec.p, direction);
         true
+    }
+}
+
+pub enum MaterialType {
+    Lambertian(Lambertian),
+    Metal(Metal),
+    Dielectric(Dialectric),
+}
+
+impl MaterialType {
+    pub fn scatter(
+        &self,
+        r_in: &Ray,
+        rec: &HitRecord,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+    ) -> bool {
+        match self {
+            MaterialType::Lambertian(m) => m.scatter(r_in, rec, attenuation, scattered),
+            MaterialType::Metal(m) => m.scatter(r_in, rec, attenuation, scattered),
+            MaterialType::Dielectric(m) => m.scatter(r_in, rec, attenuation, scattered),
+        }
     }
 }

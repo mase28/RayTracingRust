@@ -1,22 +1,23 @@
 mod camera;
 mod color;
-mod hittable;
+//mod hittable;
 mod interval;
 mod material;
 mod ray;
+mod scene;
 mod sphere;
 mod utility;
 mod vec;
 
 use camera::Camera;
-use hittable::*;
-use rand::seq::WeightError::InsufficientNonZero;
+//use hittable::*;
 use sphere::Sphere;
 
 use crate::{
     camera::CameraConfig,
     color::Color,
-    material::{Dialectric, Lambertian, Metal},
+    material::{Dialectric, Lambertian, MaterialType, Metal},
+    scene::Scene,
     utility::random_double,
     vec::{Point, Vec3},
 };
@@ -25,14 +26,15 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 fn main() {
-    let mut world = HittableList::new();
+    let mut scene = Scene::new();
 
-    let ground_mat = Arc::new(Lambertian::new(Color::new(0.5, 0.5, 0.5)));
-    world.add(Arc::new(Sphere::new(
+    let ground_mat = Lambertian::new(Color::new(0.5, 0.5, 0.5));
+    let ground_mat_idx = scene.register_material(MaterialType::Lambertian(ground_mat));
+    scene.add_object(Sphere::new(
         Point::new(0.0, -1000.0, 0.0),
         1000.0,
-        ground_mat,
-    )));
+        ground_mat_idx,
+    ));
 
     for a in -11..11 {
         for b in -11..11 {
@@ -47,31 +49,37 @@ fn main() {
                 if choose_mat < 0.8 {
                     // diffuse
                     let albedo = Vec3::random() * Vec3::random();
-                    let mat = Arc::new(Lambertian::new(albedo));
-                    world.add(Arc::new(Sphere::new(center, 0.2, mat)));
+                    let mat = Lambertian::new(albedo);
+                    let mat_idx = scene.register_material(MaterialType::Lambertian(mat));
+                    scene.add_object(Sphere::new(center, 0.2, mat_idx));
                 } else if choose_mat < 0.95 {
                     // metal
                     let albedo = Vec3::random_range(0.5, 1.0);
                     let fuzz = random_double();
-                    let mat = Arc::new(Metal::new(albedo, fuzz));
-                    world.add(Arc::new(Sphere::new(center, 0.2, mat)));
+                    let mat = Metal::new(albedo, fuzz);
+                    let mat_idx = scene.register_material(MaterialType::Metal((mat)));
+                    scene.add_object(Sphere::new(center, 0.2, mat_idx));
                 } else {
                     // glass
-                    let mat = Arc::new(Dialectric::new(1.5));
-                    world.add(Arc::new(Sphere::new(center, 0.2, mat)));
+                    let mat = Dialectric::new(1.5);
+                    let mat_idx = scene.register_material(MaterialType::Dielectric(mat));
+                    scene.add_object(Sphere::new(center, 0.2, mat_idx));
                 }
             }
         }
     }
 
-    let mat1 = Arc::new(Dialectric::new(1.5));
-    world.add(Arc::new(Sphere::new(Point::new(0.0, 1.0, 0.0), 1.0, mat1)));
+    let mat1 = Dialectric::new(1.5);
+    let mat1_idx = scene.register_material(MaterialType::Dielectric(mat1));
+    scene.add_object(Sphere::new(Point::new(0.0, 1.0, 0.0), 1.0, mat1_idx));
 
-    let mat2 = Arc::new(Lambertian::new(Color::new(0.4, 0.2, 0.1)));
-    world.add(Arc::new(Sphere::new(Point::new(-4.0, 1.0, 0.0), 1.0, mat2)));
+    let mat2 = Lambertian::new(Color::new(0.4, 0.2, 0.1));
+    let mat2_idx = scene.register_material(MaterialType::Lambertian(mat2));
+    scene.add_object(Sphere::new(Point::new(-4.0, 1.0, 0.0), 1.0, mat2_idx));
 
-    let mat3 = Arc::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0));
-    world.add(Arc::new(Sphere::new(Point::new(4.0, 1.0, 0.0), 1.0, mat3)));
+    let mat3 = Metal::new(Color::new(0.7, 0.6, 0.5), 0.0);
+    let mat3_idx = scene.register_material(MaterialType::Metal(mat3));
+    scene.add_object(Sphere::new(Point::new(4.0, 1.0, 0.0), 1.0, mat3_idx));
 
     let config = CameraConfig {
         aspect_ratio: 16.0 / 9.0,
@@ -88,6 +96,6 @@ fn main() {
     let cam = Camera::new(config);
 
     let now = Instant::now();
-    cam.render_fast(&world);
-    println!("Time taken to render: {} seconds", now.elapsed().as_secs());
+    cam.render_fast(&scene);
+    eprint!("Time taken to render: {} seconds", now.elapsed().as_secs());
 }

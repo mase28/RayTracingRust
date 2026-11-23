@@ -1,13 +1,14 @@
 use rand::rand_core::utils::Word;
 
 use crate::color::{Color, write_color};
-use crate::hittable::{HitRecord, Hittable, HittableList};
+//use crate::hittable::{HitRecord, Hittable, HittableList};
+use crate::Scene;
 use crate::interval::Interval;
 use crate::ray::Ray;
 use crate::utility::{INF, degrees_to_radians, random_double};
 use crate::vec as myvec;
 use myvec::{Point, Vec3};
-use rayon::prelude::*;
+use rayon::{collections, prelude::*};
 use std::array::from_fn;
 use std::io::{self, Write};
 use std::vec::Vec;
@@ -43,7 +44,6 @@ pub struct Camera {
     defocus_angle: f64,
     defocus_disk_u: Vec3,
     defocus_disk_v: Vec3,
-    pixels_out: Vec<Color>,
 }
 
 impl Camera {
@@ -95,22 +95,22 @@ impl Camera {
             defocus_angle: config.defocus_angle,
             defocus_disk_u: u * defocus_radius,
             defocus_disk_v: v * defocus_radius,
-            pixels_out: Vec::with_capacity((image_height * config.image_width) as usize),
         }
     }
 
-    fn ray_color(ray: &Ray, depth: u32, world: &HittableList) -> Color {
+    fn ray_color(ray: &Ray, depth: u32, scene: &Scene) -> Color {
         if depth <= 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
-        if let Some(hit) = world.hit(ray, &Interval::new(0.001, INF)) {
+        if let Some(hit) = scene.hit(ray, &Interval::new(0.001, INF)) {
             let mut scattered = Ray::default();
             let mut attenuation = Color::new_zero();
-            let did_scattered = hit
-                .mat
-                .scatter(&ray, &hit, &mut attenuation, &mut scattered);
+            let did_scattered =
+                scene
+                    .get_mat(hit.mat_idx)
+                    .scatter(&ray, &hit, &mut attenuation, &mut scattered);
             if did_scattered {
-                return attenuation * Self::ray_color(&scattered, depth - 1, &world);
+                return attenuation * Self::ray_color(&scattered, depth - 1, scene);
             }
             return Color::new_zero();
         }
@@ -145,7 +145,8 @@ impl Camera {
         Vec3::new(random_double() - 0.5, random_double() - 0.5, 0.0)
     }
 
-    pub fn render_slow(&self, world: &HittableList) {
+    // single threaded, shared ptrs
+    pub fn render_slow(&self, scene: &Scene) {
         println!("P3\n{} {}\n255", self.image_width, self.image_height);
         for j in 0..self.image_height {
             eprint!("\rLines Remaining: {}", self.image_height - j);
@@ -154,28 +155,34 @@ impl Camera {
                 let mut pixel_color = Color::new_zero();
                 for sample in 0..self.samples_per_pixel {
                     let r = self.get_ray(i, j);
-                    pixel_color += Self::ray_color(&r, self.max_depth, world);
+                    pixel_color += Self::ray_color(&r, self.max_depth, scene);
                 }
                 write_color(&(pixel_color * self.pixel_samples_scale));
             }
         }
     }
 
-    pub fn render_fast(&mut self, world: &HittableList) {
+    // multithreaded, shared ptrs
+    pub fn render_fast(&self, scene: &Scene) {
         println!("P3\n{} {}\n255", self.image_width, self.image_height);
-        self.pixels_out
+        let mut pixels_out: Vec<Color> =
+            vec![Color::new_zero(); (self.image_width * self.image_height) as usize];
+        pixels_out
             .par_iter_mut()
             .enumerate()
-            .map(|(idx, item)| {
-                let j = idx as u32 / self.image_height;
-                let i = idx as u32 - (self.image_height * j);
+            .for_each(|(idx, item)| {
+                let j = idx as u32 / self.image_width;
+                let i = idx as u32 % self.image_width;
 
                 let mut pixel_color = Color::new_zero();
-                for sample in 0..self.samples_per_pixel {
+                for _ in 0..self.samples_per_pixel {
                     let r = self.get_ray(i, j);
-                    pixel_color += Self::ray_color(&r, self.max_depth, world);
+                    pixel_color += Self::ray_color(&r, self.max_depth, scene);
                 }
                 *item = pixel_color * self.pixel_samples_scale;
             });
+        for col in pixels_out {
+            write_color(&col);
+        }
     }
 }
