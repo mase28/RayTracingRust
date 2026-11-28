@@ -7,14 +7,14 @@ use crate::utility::random_double_range;
 
 #[derive(Clone, Copy)]
 pub struct Vec3 {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 pub type Point = Vec3;
 
 impl Vec3 {
-    pub fn new(x: f64, y: f64, z: f64) -> Self {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
         Vec3 { x, y, z }
     }
     pub fn new_zero() -> Self {
@@ -26,12 +26,12 @@ impl Vec3 {
     }
     pub fn random() -> Self {
         Vec3 {
-            x: rand::random::<f64>(),
-            y: rand::random::<f64>(),
-            z: rand::random::<f64>(),
+            x: rand::random::<f32>(),
+            y: rand::random::<f32>(),
+            z: rand::random::<f32>(),
         }
     }
-    pub fn random_range(min: f64, max: f64) -> Self {
+    pub fn random_range(min: f32, max: f32) -> Self {
         Vec3 {
             x: rand::random_range(min..max),
             y: rand::random_range(min..max),
@@ -44,7 +44,7 @@ impl Vec3 {
         while !found {
             p = Self::random_range(-1.0, 1.0);
             let lensq = p.dot(p);
-            if 10.0f64.powi(-160) <= lensq && lensq <= 1.0 {
+            if 10.0f32.powi(-160) <= lensq && lensq <= 1.0 {
                 found = true;
                 p /= lensq.sqrt();
             }
@@ -77,7 +77,7 @@ impl Vec3 {
         v - (n * v.dot(n)) * 2.0
     }
 
-    pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) -> Vec3 {
+    pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) -> Vec3 {
         let cos_theta = n.dot(uv * -1.0).min(1.0);
         let r_out_perp = (uv + n * cos_theta) * etai_over_etat;
         let r_out_parallel = n * (-1.0 * ((1.0 - r_out_perp.length().powi(2)).abs()).sqrt());
@@ -159,10 +159,10 @@ impl ops::Mul<Vec3> for Vec3 {
     }
 }
 
-impl ops::Mul<f64> for Vec3 {
+impl ops::Mul<f32> for Vec3 {
     type Output = Self;
 
-    fn mul(self, other: f64) -> Self {
+    fn mul(self, other: f32) -> Self {
         Self {
             x: self.x * other,
             y: self.y * other,
@@ -187,10 +187,10 @@ impl ops::MulAssign<&Self> for Vec3 {
     }
 }
 
-impl ops::Div<f64> for Vec3 {
+impl ops::Div<f32> for Vec3 {
     type Output = Self;
 
-    fn div(self, other: f64) -> Self {
+    fn div(self, other: f32) -> Self {
         Self {
             x: self.x / other,
             y: self.y / other,
@@ -199,8 +199,8 @@ impl ops::Div<f64> for Vec3 {
     }
 }
 
-impl ops::DivAssign<f64> for Vec3 {
-    fn div_assign(&mut self, other: f64) {
+impl ops::DivAssign<f32> for Vec3 {
+    fn div_assign(&mut self, other: f32) {
         self.x /= other;
         self.y /= other;
         self.z /= other;
@@ -208,11 +208,11 @@ impl ops::DivAssign<f64> for Vec3 {
 }
 
 impl Vec3 {
-    pub fn length(&self) -> f64 {
+    pub fn length(&self) -> f32 {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
     }
 
-    pub fn dot(&self, other: Self) -> f64 {
+    pub fn dot(&self, other: Self) -> f32 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
@@ -234,7 +234,7 @@ impl Vec3 {
     }
 
     pub fn near_zero(&self) -> bool {
-        let s = 1.0f64.powi(-8);
+        let s = 1.0f32.powi(-8);
         self.x.abs() < s && self.y.abs() < s && self.z.abs() < s
     }
 }

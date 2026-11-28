@@ -8,6 +8,7 @@ mod scene;
 mod sphere;
 mod utility;
 mod vec;
+mod vec_simd;
 
 use camera::Camera;
 //use hittable::*;
@@ -40,9 +41,9 @@ fn main() {
         for b in -11..11 {
             let choose_mat = random_double();
             let center = Point::new(
-                a as f64 + 0.9 * random_double(),
+                a as f32 + 0.9 * random_double(),
                 0.2,
-                b as f64 + 0.9 * random_double(),
+                b as f32 + 0.9 * random_double(),
             );
 
             if (center - Point::new(4.0, 0.2, 0.0)).length() > 0.9 {
@@ -96,6 +97,6 @@ fn main() {
     let cam = Camera::new(config);
 
     let now = Instant::now();
-    cam.render_fast(&scene);
+    cam.render_faster(&scene);
     eprint!("Time taken to render: {} seconds", now.elapsed().as_secs());
 }
